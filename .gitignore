@@ -1,0 +1,36 @@
+# Python
+__pycache__/config.cpython-310.pyc
+__pycache__/config.cpython-314.pyc
+__pycache__/train.cpython-310.pyc
+__pycache__/train.cpython-314.pyc
+__pycache__/train_utils.cpython-314.pyc
+models/__pycache__/__init__.cpython-314.pyc
+models/__pycache__/gcn.cpython-314.pyc
+models/__pycache__/init_model.cpython-314.pyc
+models/__pycache__/mlp.cpython-314.pyc
+samplers/__pycache__/__init__.cpython-310.pyc
+samplers/__pycache__/__init__.cpython-314.pyc
+samplers/__pycache__/helpers.cpython-310.pyc
+samplers/__pycache__/helpers.cpython-314.pyc
+samplers/__pycache__/node_based_sampling.cpython-310.pyc
+samplers/__pycache__/node_based_sampling.cpython-314.pyc
+*.py[cod]
+.venv/
+venv/
+env/
+
+# IDE
+.vscode/
+.idea/
+
+# Data
+data/
+!data/*.py        # keep any code files if you have them
+
+# Results / plots
+results/
+plots/
+
+# Checkpoints
+*.pt
+*.pth
