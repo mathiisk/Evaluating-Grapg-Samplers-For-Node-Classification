@@ -51,4 +51,4 @@ pip install -r requirements.txt
 python run_experiment.py
 ```
 
-The specified in the config file will be downloaded atuomatically under a new ./data folder. Results will be saved automatically to the results/ directory as .csv files.
+The specified datasets in the config file will be downloaded atuomatically under a new ./data folder. Results will be saved automatically to the results/ directory as .csv files.
