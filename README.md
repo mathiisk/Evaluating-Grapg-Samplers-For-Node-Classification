@@ -51,4 +51,4 @@ pip install -r requirements.txt
 python run_experiment.py
 ```
 
-Results will be saved automatically to the results/ directory as .csv files.
+The specified in the config file will be downloaded atuomatically under a new ./data folder. Results will be saved automatically to the results/ directory as .csv files.
