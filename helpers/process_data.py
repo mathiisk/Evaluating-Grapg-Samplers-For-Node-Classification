@@ -1,19 +1,24 @@
 import os
 import torch
-import numpy as np
 import pandas as pd
-from torch_geometric.data import Data
 from torch_geometric.datasets import Planetoid, Coauthor, Amazon
 from ogb.nodeproppred import PygNodePropPredDataset
+from collections import defaultdict
+import numpy as np
 
 
 def edge_homophily(edge_index, y):
-    """Compute the edge homophily ratio of a graph."""
+    """
+    Compute the edge homophily ratio of a graph.
+    """
     src, dst = edge_index
     return (y[src] == y[dst]).float().mean().item()
 
 
 def load_dataset(name):
+    """
+    Load a dataset by name. Supports Planetoid, Coauthor, Amazon, and OGB.
+    """
     if name in ["Cora", "CiteSeer", "PubMed"]:
         dataset = Planetoid(root=f"data/{name}", name=name)
         data = dataset[0]
@@ -27,10 +32,7 @@ def load_dataset(name):
 
         torch.load = patched_load
         try:
-            dataset = PygNodePropPredDataset(
-                name="ogbn-arxiv",
-                root="data/ogbn_arxiv"
-            )
+            dataset = PygNodePropPredDataset(name="ogbn-arxiv", root="data/ogbn_arxiv")
         finally:
             torch.load = orig_load
 
@@ -38,44 +40,27 @@ def load_dataset(name):
         data.y = data.y.squeeze()
         return dataset, data
 
-
     elif name in ["CS", "Physics"]:
         dataset = Coauthor(root=f"data/{name}", name=name)
         data = dataset[0]
-        
+
     elif name in ["Computers", "Photo"]:
         dataset = Amazon(root=f"data/{name}", name=name)
         data = dataset[0]
-        
+
     else:
         raise ValueError(f"Unknown dataset: {name}")
 
     return dataset, data
 
 
-def write_to_csv(results, output_file="results.csv"):
-    os.makedirs("results", exist_ok=True)
-    df = pd.DataFrame(results)
-    path = f"results/{output_file}"
-    file_exists = os.path.exists(path)
-
-    df.to_csv(
-        path,
-        mode="a" if file_exists else "w",
-        header=not file_exists,
-        index=False,
-        float_format="%.4f"
-    )
-    print(f"\nSaved averaged results to {output_file}")
-
-from collections import defaultdict
-import numpy as np
-
-
 def average_results(results):
+    """
+    Compute mean and std of metrics across seeds for each config.
+    """
     grouped = defaultdict(list)
 
-    # Group results by configuration (ignore seed)
+    # group by config (ignore seed)
     for res in results:
         key = (res["dataset"], res["model"], res["sampler"], res["ratio"])
         grouped[key].append(res)
@@ -85,7 +70,6 @@ def average_results(results):
         dataset, model, sampler, ratio = key
         num_nodes = [r["num_nodes"] for r in group]
         num_edges = [r["num_edges"] for r in group]
-
         train_f1_vals = [r["train_f1"] for r in group]
         val_f1_vals = [r["val_f1"] for r in group]
         test_f1_vals = [r["test_f1"] for r in group]
@@ -108,8 +92,10 @@ def average_results(results):
     return summary
 
 
-
 def summarize_results(cfg, results):
+    """
+    Print summary tables of test F1 mean ± std per dataset/model/sampler.
+    """
     print("\n" + "=" * 80)
     print("Summary tables (Test F1 mean ± std):")
 
@@ -122,11 +108,11 @@ def summarize_results(cfg, results):
             print(f"Dataset: {dataset_name} | Model: {model_name}")
 
             df_sub = df[(df["dataset"] == dataset_name) & (df["model"] == model_name)]
-
             if df_sub.empty:
                 print("No results.")
                 continue
 
+            # find best mean per ratio
             best_mean_by_ratio = {}
             for ratio in ratios:
                 df_r = df_sub[df_sub["ratio"] == ratio]
@@ -142,8 +128,7 @@ def summarize_results(cfg, results):
                 row_flags = [False]
 
                 for ratio in ratios:
-                    df_r = df_sub[(df_sub["sampler"] == sampler_name) &
-                                  (df_sub["ratio"] == ratio)]
+                    df_r = df_sub[(df_sub["sampler"] == sampler_name) & (df_sub["ratio"] == ratio)]
                     if df_r.empty:
                         cell = "-"
                         is_best = False
@@ -153,29 +138,49 @@ def summarize_results(cfg, results):
                         cell = f"{mean:.3f}±{std:.3f}"
                         best = best_mean_by_ratio.get(ratio, None)
                         is_best = best is not None and abs(mean - best) < 1e-12
+
                     row_plain.append(cell)
                     row_flags.append(is_best)
 
                 rows_plain.append(row_plain)
                 rows_flags.append(row_flags)
 
+            # compute column widths
             all_rows_plain = [header] + rows_plain
-            col_widths = [
-                max(len(str(row[i])) for row in all_rows_plain)
-                for i in range(len(header))
-            ]
+            col_widths = [max(len(str(row[i])) for row in all_rows_plain) for i in range(len(header))]
 
+            # print table header
             header_line = " | ".join(str(header[i]).ljust(col_widths[i]) for i in range(len(header)))
             sep_line = "-+-".join("-" * col_widths[i] for i in range(len(header)))
             print(header_line)
             print(sep_line)
 
+            # print each row, highlight best
             for row_plain, row_flags in zip(rows_plain, rows_flags):
                 parts = []
                 for i, (cell, is_best) in enumerate(zip(row_plain, row_flags)):
                     padded = str(cell).ljust(col_widths[i])
                     if is_best and i > 0:
-                        padded = f"\033[91m{padded}\033[0m"
+                        padded = f"\033[91m{padded}\033[0m"  # red highlight
                     parts.append(padded)
                 line = " | ".join(parts)
                 print(line)
+
+
+def write_to_csv(results, output_file="results.csv"):
+    """
+    Save results to a CSV file, appending if the file exists.
+    """
+    os.makedirs("results", exist_ok=True)
+    df = pd.DataFrame(results)
+    path = f"results/{output_file}"
+    file_exists = os.path.exists(path)
+
+    df.to_csv(
+        path,
+        mode="a" if file_exists else "w",
+        header=not file_exists,
+        index=False,
+        float_format="%.4f"
+    )
+    print(f"\nSaved averaged results to {output_file}")

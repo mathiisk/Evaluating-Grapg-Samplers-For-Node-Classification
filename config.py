@@ -28,26 +28,26 @@ from models.gcn import GCN
 
 @dataclass
 class Config:
-    
-    # ----------------------------------------------------------------------
+    """
+       Configuration class for graph sampling experiments and model training.
+       Holds dataset info, samplers, models, hyperparameters, and training settings.
+    """
+
     # Basic experiment settings
-    # ----------------------------------------------------------------------
     device: torch.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     seeds: list[int] = field(default_factory=lambda: [i for i in range(1, 11)])
 
-    # ----------------------------------------------------------------------
+
     # Dataset configuration
-    # ----------------------------------------------------------------------
-    datasets: List[str] = field(default_factory=lambda: ["PubMed", "Cora", "ogbn_arxiv", "CiteSeer", "Physics", "CS", "Computers", "Photo"]) # "PubMed", "Cora" "ogbn_arxiv, "CiteSeer", "Physics", "Computers", "Photo", "CS"
-    sampling_ratios: List[float] = field(default_factory=lambda: [1, 0.5, 0.3, 0.1, 0.05]) # 0.5, 0.3, 0.1, 0.05
+    datasets: List[str] = field(default_factory=lambda: ["PubMed", "Cora", "ogbn_arxiv", "CiteSeer", "Physics", "CS", "Computers", "Photo"])
+    sampling_ratios: List[float] = field(default_factory=lambda: [1, 0.5, 0.3, 0.1, 0.05])
     # Data splits
     train_split: float = 0.8
     val_split: float = 0.1
     test_split: float = 0.1
 
-    # ----------------------------------------------------------------------
+
     # Samplers
-    # ----------------------------------------------------------------------
     samplers: Dict[str, Callable] = field(default_factory=lambda: {
         "random_node": RandomNodeSampler,
         "random_degree": RandomDegreeNodeSampler,
@@ -70,9 +70,7 @@ class Config:
     ff_forward_p: float = 0.5
 
 
-    # ----------------------------------------------------------------------
     # Models
-    # ----------------------------------------------------------------------
     models: Dict[str, Callable] = field(default_factory=lambda: {
         "mlp": MLP,
         "gcn": GCN,
@@ -88,9 +86,7 @@ class Config:
     use_batchnorm: bool = True
 
 
-    # ----------------------------------------------------------------------
     # Training configuration
-    # ----------------------------------------------------------------------
     optimizer: Callable = torch.optim.Adam
     lr: float = 0.01
     min_lr: float = 1e-5

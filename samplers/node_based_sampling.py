@@ -9,7 +9,7 @@ class RandomNodeSampler:
 
     def sample(self, data, num_nodes_to_sample):
         """
-        Sample nodes randomly, weighted by degree.
+        Sample nodes randomly.
 
         Args:
             data: PyG Data object containing edge_index
@@ -61,13 +61,8 @@ class RandomDegreeNodeSampler:
 
 
 class RandomPageRankSampler:
-    """
-    Randomly samples nodes from a PyG Data graph based on PageRank scores.
-    Higher PageRank nodes are more likely to be sampled.
-    """
 
     def __init__(self, params):
-
         self.damping_factor = self.jump_p = getattr(params, "page_rank_damping_factor", 0.85) 
         self.max_iter = self.jump_p = getattr(params, "page_rank_max_iter", 100) 
         

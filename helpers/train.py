@@ -4,18 +4,37 @@ import copy
 
 
 def train_one_epoch(train_data, model, optimizer):
+    """
+    Run one training step over the training data.
+    """
     model.train()
     optimizer.zero_grad()
+
+    # forward pass
     out = model(train_data.x, train_data.edge_index)
+
+    # compute loss on training nodes
     loss = model.loss(out[train_data.train_mask], train_data.y[train_data.train_mask])
+
+    # backprop and update weights
     loss.backward()
     optimizer.step()
-    return loss.item()
 
+    return loss.item()
 
 
 @torch.no_grad()
 def evaluate(data, model):
+    """
+    Evaluate model performance on all data splits.
+
+    Inputs:
+        data: PyG data object with train/val/test masks and labels
+        model: torch.nn.Module model
+
+    Returns:
+        dict: metrics for train, val, test with loss and weighted F1
+    """
     model.eval()
     out = model(data.x, data.edge_index)
     pred = out.argmax(dim=1)
@@ -26,14 +45,30 @@ def evaluate(data, model):
         y_true = true[mask]
         y_pred = pred[mask]
         logits = out[mask]
+
         loss = model.loss(logits, y_true).item()
         f1 = f1_score(y_true.cpu(), y_pred.cpu(), average="weighted", zero_division=0)
+
         results[split_name] = {"loss": loss, "f1": f1}
 
     return results
 
 
-def train(model, train_data, optimizer, scheduler, params, verbose):
+def train(model, train_data, optimizer, scheduler, params, verbose=True):
+    """
+    Train the model with early stopping and learning rate scheduling.
+
+    Inputs:
+        model: torch.nn.Module model
+        train_data: PyG data object
+        optimizer: torch optimizer
+        scheduler: learning rate scheduler
+        params: config object with training params
+        verbose: bool, whether to print progress
+
+    Returns:
+        tuple: (metrics dict, trained model)
+    """
     device = torch.device(params.device)
     model.to(device)
     train_data = train_data.to(device)
@@ -44,15 +79,17 @@ def train(model, train_data, optimizer, scheduler, params, verbose):
     epochs_no_improve = 0
 
     for epoch in range(1, params.n_epochs + 1):
-                    
+        # do one training step
         train_one_epoch(train_data, model, optimizer)
+
+        # evaluate on all splits
         full_metrics = evaluate(train_data, model)
-
         val_loss = full_metrics["val"]["loss"]
-        scheduler.step(val_loss)
-        
-        
 
+        # update scheduler
+        scheduler.step(val_loss)
+
+        # print progress
         if epoch % params.print_every == 0 and verbose:
             print(
                 f"Epoch {epoch:03d} | "
@@ -60,6 +97,7 @@ def train(model, train_data, optimizer, scheduler, params, verbose):
                 f"Val Loss = {full_metrics['val']['loss']:.4f} | Val F1 = {full_metrics['val']['f1']:.4f}"
             )
 
+        # check for early stopping
         if params.epoch_patience is not None:
             if val_loss < best_val_loss - params.min_delta:
                 best_val_loss = val_loss
@@ -73,8 +111,9 @@ def train(model, train_data, optimizer, scheduler, params, verbose):
                         print(f"Early stopping at epoch {epoch:03d}")
                     break
 
+    # load best model if early stopping occurred
     if best_state_dict is not None:
         model.load_state_dict(best_state_dict)
         full_metrics = best_metrics
 
-    return full_metrics
+    return full_metrics, model

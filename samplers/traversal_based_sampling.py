@@ -2,18 +2,18 @@ import torch
 
 class RandomWalkSampler:
     """
-    Basic random walk sampler with occasional restarts.
+    Basic random walk sampler.
 
-    Starting from a random node, we walk along random outgoing edges.
-    With probability `restart_p` we ignore the current position and
-    restart from a fresh random node.
+    Returns nodes sampled via a simple random walk with ocasional restart.
     """
 
     def __init__(self, params):
-        # Probability of jumping to a fresh random node
+        # Probability of jumping to the start node
         self.restart_p = getattr(params, "rw_restart_p", 0.15)
 
- def sample(self, data, num_nodes_to_sample):
+
+    def sample(self, data, num_nodes_to_sample):
+
         edge_index = data.edge_index
         src, dst = edge_index
         device = src.device
@@ -46,11 +46,13 @@ class RandomWalkSampler:
             # Mark current node as sampled.
             mask[cur] = True
             counter += 1
+
+            # if we got unlucky with initial starting seed choose a different one
             if counter > num_nodes and mask.sum().item() < num_nodes_to_sample:
                 cur = torch.randint(0, num_nodes, (1,), device=device).item()
 
             if torch.rand(1, device=device).item() < self.restart_p or deg[cur].item() == 0:
-                # Restart: pick a new random node.
+                # Restart:
                 cur = start_point
             else:
                 # Follow one random outgoing edge from the current node.
@@ -72,7 +74,8 @@ class RandomWalkSampler:
 
 class RandomJumpSampler:
     """
-    Random walk sampler with explicit "jump to a different node" moves.
+    Random walk sampler with explicit jump moves.
+    Nodes are selected by either following edges or jumping to a random node.
     """
 
     def __init__(self, params):
@@ -100,7 +103,7 @@ class RandomJumpSampler:
 
         mask = torch.zeros(num_nodes, dtype=torch.bool, device=device)
 
-        # Initial node where the walk starts.
+        # Initial node where the walk starts
         cur = torch.randint(0, num_nodes, (1,), device=device).item()
 
         while mask.sum().item() < num_nodes_to_sample:
@@ -181,11 +184,8 @@ class RandomNeighborSampler:
 
 class ForestFireSampler:
     """
-    Forest fire sampling.
-
-    We start "fires" at random seed nodes and let them spread to neighbours
-    with probability `forward_p`. When a frontier burns out, we start a new
-    fire at another random node until we have enough sampled nodes.
+    Fires start at a random node and spread to neighbors with probability forward_p.
+    New fire starts at random nodes until enough nodes are sampled.
     """
 
     def __init__(self, params):

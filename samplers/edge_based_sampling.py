@@ -1,10 +1,11 @@
 import torch
 
-
 class RandomEdgeSampler:
     """
     Sample nodes by first sampling random edges and then taking
     all endpoints of those edges.
+
+    Returns a set of node indices collected from random edges.
     """
 
     def __init__(self, params=None):

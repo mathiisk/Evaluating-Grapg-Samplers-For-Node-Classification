@@ -2,8 +2,8 @@ import os
 import pandas as pd
 
 # ================== CONFIG ==================
-RESULTS_DIR = "results"
-INPUT_FILE = "results_Physics.csv"
+RESULTS_DIR = ""
+INPUT_FILE = "../results/results_Physics.csv"
 # ============================================
 
 
